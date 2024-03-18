@@ -5,9 +5,11 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
-  const logger = new Logger('Microservice - Payments');
+  const logger = new Logger('Payments - Microservice');
 
   const app = await NestFactory.create(AppModule, { rawBody: true });
+
+  app.setGlobalPrefix('api');
 
   app.useGlobalPipes(
     new ValidationPipe({

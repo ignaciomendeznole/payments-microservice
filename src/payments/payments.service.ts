@@ -65,7 +65,6 @@ export class PaymentsService {
 
     let event: Stripe.Event;
 
-    // Real
     const endpointSecret = envs.stripeEndpointSecret;
 
     try {
@@ -74,30 +73,23 @@ export class PaymentsService {
         sig,
         endpointSecret,
       );
-    } catch (error) {
-      return res.status(400).send(`Webhook Error: ${error.message}`);
+
+      switch (event.type) {
+        case 'charge.succeeded':
+          const paymentIntent = event.data.object as Stripe.Charge;
+          this.logger.log(`PaymentIntent was successful: ${paymentIntent.id}`);
+
+          return res.status(200).json(event);
+
+          // TODO: Notify the order service that the payment was successful
+          break;
+
+        default:
+          this.logger.warn(`Unhandled event type: ${event.type}`);
+      }
+    } catch (err) {
+      this.logger.error(err);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
     }
-
-    switch (event.type) {
-      case 'charge.succeeded':
-        const chargeSucceeded = event.data.object as Stripe.Charge;
-        const payload = {
-          stripePaymentId: chargeSucceeded.id,
-          orderId: chargeSucceeded.metadata.orderId,
-          receiptUrl: chargeSucceeded.receipt_url,
-        };
-
-        this.logger.log({ payload });
-
-        this.natsClient.emit('payment.succeeded', payload);
-        break;
-
-      default:
-        this.logger.log(`Unhandled event type: ${event.type}`);
-    }
-
-    return res.status(200).json({
-      sig,
-    });
   }
 }
