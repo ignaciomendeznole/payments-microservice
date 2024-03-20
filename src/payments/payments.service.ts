@@ -79,13 +79,13 @@ export class PaymentsService {
           const paymentIntent = event.data.object as Stripe.Charge;
           this.logger.log(`PaymentIntent was successful: ${paymentIntent.id}`);
 
-          this.natsClient.send('order.payment.succeeded', {
+          this.natsClient.send('payment.succeeded', {
             orderId: paymentIntent.metadata.orderId,
+            stripePaymentid: paymentIntent.id,
+            receiptUrl: paymentIntent.receipt_url,
           });
 
           return res.status(200).json(event);
-
-          break;
 
         default:
           this.logger.warn(`Unhandled event type: ${event.type}`);
