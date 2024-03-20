@@ -79,7 +79,7 @@ export class PaymentsService {
           const paymentIntent = event.data.object as Stripe.Charge;
           this.logger.log(`PaymentIntent was successful: ${paymentIntent.id}`);
 
-          this.natsClient.send('payment.succeeded', {
+          this.natsClient.emit('payment.succeeded', {
             orderId: paymentIntent.metadata.orderId,
             stripePaymentid: paymentIntent.id,
             receiptUrl: paymentIntent.receipt_url,
