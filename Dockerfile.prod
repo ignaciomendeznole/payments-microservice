@@ -1,0 +1,47 @@
+# Dependencies
+
+FROM node:21-alpine3.19 as deps
+
+WORKDIR /usr/src/app
+
+COPY package.json ./
+COPY yarn.lock ./
+
+RUN yarn install
+
+# Builder - Build the app
+FROM node:21-alpine3.19 as builder
+
+WORKDIR /usr/src/app
+
+# Copy the node_modules from the deps stage into the current working directory
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+
+# Copy the source code except the files defined in .dockerignore
+COPY . .
+
+RUN yarn build
+
+# Clean up the node_modules and install only the production dependencies (without devDependencies)
+RUN yarn install --frozen-lockfile --production && yarn cache clean --force
+
+# Run prisma generate
+RUN npx prisma generate
+
+# Create final image
+FROM node:21-alpine3.19 as prod
+
+WORKDIR /usr/src/app
+
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+
+# Copy the dist folder from the builder stage into the current working directory
+COPY --from=builder /usr/src/app/dist ./dist
+
+ENV NODE_ENV=production
+
+USER node
+
+EXPOSE 3000
+
+CMD ["node", "dist/main.js"]
